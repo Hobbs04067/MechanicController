@@ -1,8 +1,8 @@
 [package]
-name = "tjk00/mechaniccontroller"
+name = "Hobbs04067/MechanicController"
 version = "0.1.0"
 license = "MIT"
-authors = ["Timothy Philips"]
+authors = ["Hobbs0406"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 exclude = ["**"]
