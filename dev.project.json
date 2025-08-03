@@ -1,0 +1,12 @@
+{
+    "name": "mechaniccontroller",
+    "tree": {
+        "$className": "DataModel",
+        "ReplicatedStorage": {
+            "$ignoreUnknownInstances": true,
+            "MechanicController": {
+                "$path": "Source"
+            }
+        }
+    }
+}

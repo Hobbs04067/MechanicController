@@ -1,0 +1,17 @@
+[package]
+name = "tjk00/mechaniccontroller"
+version = "0.1.0"
+license = "MIT"
+authors = ["Timothy Philips"]
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+exclude = ["**"]
+include = [
+    "Source",
+    "Source/*",
+    "default.project.json",
+    "wally.lock",
+    "wally.toml",
+]
+
+[dependencies]
