@@ -5,6 +5,7 @@ local ReplicationEvent = script.Parent.ReplicateController
 
 local Util = script.Parent.Util
 local Types = require(Util.Types)
+local Bindable = require(Util.Bindable)
 local Mechanic = require(Util.Mechanic)
 
 type MechanicController = Types.MechanicController
@@ -26,7 +27,11 @@ local ControllerReplicationDict = {
 local Controller = {}
 Controller.__index = Controller
 
-local module = {}
+local module = {
+	ConstructingPreMechanics = Bindable.new(),
+	ConstructingPostMechanics = Bindable.new(),
+	Destructing = Bindable.new(),
+}
 
 module.MechanicDataModules = {}
 
@@ -88,14 +93,22 @@ local function loadMovementMechanics(self: MechanicController)
 	for mechanicName: string, mechanicData: MechanicInfo in pairs(mechanicDatas) do
 		self.mechanics[mechanicName] = Mechanic.new(self, mechanicName, mechanicData.data)
 
-		if self.mechanics[mechanicName]["SERVER_toggleFunction"] or self.mechanics[mechanicName]["REPLICATED_toggleFunction"] then
-			print("YES")
+		if
+			self.mechanics[mechanicName]["SERVER_toggleFunction"]
+			or self.mechanics[mechanicName]["REPLICATED_toggleFunction"]
+		then
 			if RunService:IsClient() then
 				if Players.LocalPlayer == self.player then
-					self._connections["MechanicReplication_"..mechanicName] = self.mechanics[mechanicName].Toggled:Connect(function(toggle: boolean)
-						print("TOGGLING MECHANIC REPLCIUATION")
-						ReplicationEvent:FireServer(ControllerReplicationDict.update, self.rig, mechanicName, toggle)
-					end)
+					self._connections["MechanicReplication_" .. mechanicName] = self.mechanics[mechanicName].Toggled:Connect(
+						function(toggle: boolean)
+							ReplicationEvent:FireServer(
+								ControllerReplicationDict.update,
+								self.rig,
+								mechanicName,
+								toggle
+							)
+						end
+					)
 				end
 			end
 		end
@@ -132,7 +145,11 @@ function module.new(characterRig: Model, player: Player): MechanicController
 		_connections = {},
 	}, Controller)
 
+	module.ConstructingPreMechanics:Fire(self)
+
 	loadMovementMechanics(self)
+
+	module.ConstructingPostMechanics:Fire(self)
 
 	module.Controllers[self.rig] = self
 
@@ -154,6 +171,8 @@ function Controller.Destroy(self: MechanicController)
 	if RunService:IsServer() then
 		ReplicationEvent:FireAllClients(ControllerReplicationDict.destroy, self.rig)
 	end
+
+	module.Destructing:Fire(self)
 
 	for _, mechanic: Mechanic in pairs(self.mechanics) do
 		mechanic:Destroy()
@@ -182,33 +201,38 @@ if RunService:IsServer() then
 		end
 	end)
 
-	ReplicationEvent.OnServerEvent:Connect(function(player: Player, event: string, rig: Model, mechanicName: string, toggled: boolean)
-		if event == ControllerReplicationDict.update then
-			if module.Controllers[rig] then
-				print("TOGGLED ON SERVER")
-				module.Controllers[rig].mechanics[mechanicName]:Toggle(toggled)
-				
-				if module.Controllers[rig].mechanics[mechanicName]["REPLICATED_toggleFunction"] then
-					print("HECK")
-					for _, iPlayer: Player in pairs(Players:GetPlayers()) do
-						if iPlayer ~= player then
-							ReplicationEvent:FireClient(iPlayer, ControllerReplicationDict.update, rig, mechanicName, toggled)
+	ReplicationEvent.OnServerEvent:Connect(
+		function(player: Player, event: string, rig: Model, mechanicName: string, toggled: boolean)
+			if event == ControllerReplicationDict.update then
+				if module.Controllers[rig] then
+					module.Controllers[rig].mechanics[mechanicName]:Toggle(toggled)
+
+					if module.Controllers[rig].mechanics[mechanicName]["REPLICATED_toggleFunction"] then
+						for _, iPlayer: Player in pairs(Players:GetPlayers()) do
+							if iPlayer ~= player then
+								ReplicationEvent:FireClient(
+									iPlayer,
+									ControllerReplicationDict.update,
+									rig,
+									mechanicName,
+									toggled
+								)
+							end
 						end
 					end
 				end
 			end
 		end
-	end)
+	)
 else
 	ReplicationEvent.OnClientEvent:Connect(function(event: string, ...)
 		local args = { ... }
 		print(args)
 
 		if event == ControllerReplicationDict.construct then
-			local controller = module.new(args[1], args[2])
-			print("CONSTRUCTED MECHANIC CONTROLLER: ", controller)
+			--[[local controller = ]]
+			module.new(args[1], args[2])
 		elseif event == ControllerReplicationDict.destroy then
-			print("DESTROYING MECHANIC CONTROLLER: ", module.Controllers[args[1]])
 			if module.Controllers[args[1]] then
 				module.Controllers[args[1]]:Destroy()
 			end

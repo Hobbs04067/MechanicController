@@ -3,6 +3,6 @@
 registry = "test"
 
 [[package]]
-name = "tjk00/mechaniccontroller"
+name = "hobbs04067/mechaniccontroller"
 version = "0.1.0"
 dependencies = []

@@ -1,4 +1,4 @@
-type func = any
+type func = (...any) -> ...any
 
 export type MechanicData = {
     initFunction: func,
@@ -14,7 +14,7 @@ export type MechanicData = {
     SERVER_cleanupFunction: func,
     REPLICATED_cleanupFunction: func,
 
-    functionConnections: { func }
+    functionConnections: { [RBXScriptSignal]: func },
 }
 
 export type MechanicInfo = {
@@ -26,7 +26,11 @@ export type MechanicInfo = {
 }
 
 export type Bindable = {
-    
+    _connections: { func },
+
+    Connect: func,
+    Fire: func,
+    Destroy: func
 }
 
 export type Mechanic = {
@@ -37,11 +41,32 @@ export type Mechanic = {
 	_toggled: boolean,
 	_enabled: boolean?,
 
-    Toggled: Bindable
+    _initFunction: func,
+    _destroyFunction: func,
+    _toggleFunction: func,
+    _cleanupFunction: func,
+
+    Toggled: Bindable,
+
+    Toggle: func,
+    Enable: func,
+    Disable: func,
+    Destroy: func,
+    Init: func,
+    Enabled: func,
+    Disabled: func,
+    Toggled: func,
+    Using: func,
 }
 
 export type MechanicController = {
-    
+    rig: Model,
+    player: Player,
+    mechanics: { [string]: Mechanic },
+
+    _connections: { [string]: RBXScriptConnection },
+
+    Destroy: func,
 }
 
 return nil
