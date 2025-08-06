@@ -28,6 +28,7 @@ local Controller = {}
 Controller.__index = Controller
 
 local module = {
+	_metadata = Controller,
 	ConstructingPreMechanics = Bindable.new(),
 	ConstructingPostMechanics = Bindable.new(),
 	Destructing = Bindable.new(),
@@ -134,7 +135,6 @@ end
 
 function module.new(characterRig: Model, player: Player): MechanicController
 	for charRequisite: string, _ in pairs(coreRigComponents) do
-		print("WAITING FOR " .. charRequisite)
 		characterRig:WaitForChild(charRequisite)
 	end
 
@@ -227,7 +227,6 @@ if RunService:IsServer() then
 else
 	ReplicationEvent.OnClientEvent:Connect(function(event: string, ...)
 		local args = { ... }
-		print(args)
 
 		if event == ControllerReplicationDict.construct then
 			--[[local controller = ]]
