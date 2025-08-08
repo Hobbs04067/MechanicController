@@ -32,6 +32,7 @@ local module = {
 	ConstructingPreMechanics = Bindable.new(),
 	ConstructingPostMechanics = Bindable.new(),
 	Destructing = Bindable.new(),
+	PlayerReplicated = Bindable.new(),
 }
 
 module.MechanicDataModules = {}
@@ -85,8 +86,8 @@ local function loadMovementMechanics(self: MechanicController)
 			datas = { datas }
 		end
 
-		for index, data: MechanicInfo in pairs(datas) do
-			local name = data["name"] or index
+		for _, data: MechanicInfo in pairs(datas) do
+			local name = data["name"]
 			mechanicDatas[name] = data
 		end
 	end
@@ -199,6 +200,8 @@ if RunService:IsServer() then
 		for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
 			ReplicationEvent:FireClient(player, ControllerReplicationDict.add_mechanics, mechanicModule)
 		end
+
+		module.PlayerReplicated:Fire(player)
 	end)
 
 	ReplicationEvent.OnServerEvent:Connect(
