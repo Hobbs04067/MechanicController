@@ -46,17 +46,17 @@ export type Mechanic = {
 	_toggleFunction: func,
 	_cleanupFunction: func,
 
-	Toggling: Bindable,
+	Toggled: Bindable,
 
 	Toggle: func,
 	Enable: func,
 	Disable: func,
 	Destroy: func,
 	Init: func,
-	Enabled: func,
-	Disabled: func,
-	Toggled: func,
-	Using: func,
+	IsEnabled: func,
+	IsDisabled: func,
+	IsToggled: func,
+	IsUsing: func,
 }
 
 export type MechanicController = {

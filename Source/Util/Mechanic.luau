@@ -54,7 +54,7 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 	self._toggled = false
 	self._enabled = nil
 
-	self.Toggling = Bindable.new()
+	self.Toggled = Bindable.new()
 
 	for functionName, _ in pairs(mechanicFunctions) do
 		if data[getMechanicPrefix(self) .. functionName] then
@@ -145,19 +145,19 @@ function Mechanic.Init(self: Mechanic)
 	end
 end
 
-function Mechanic.Enabled(self: Mechanic)
+function Mechanic.IsEnabled(self: Mechanic)
 	return self._enabled
 end
 
-function Mechanic.Disabled(self: Mechanic)
+function Mechanic.IsDisabled(self: Mechanic)
 	return not self._enabled
 end
 
-function Mechanic.Toggled(self: Mechanic)
+function Mechanic.IsToggled(self: Mechanic)
 	return self._toggled
 end
 
-function Mechanic.Using(self: Mechanic)
+function Mechanic.IsUsing(self: Mechanic)
 	return self._toggled and self._enabled
 end
 
