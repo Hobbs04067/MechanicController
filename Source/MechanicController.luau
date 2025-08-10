@@ -101,7 +101,7 @@ local function loadMovementMechanics(self: MechanicController)
 		then
 			if RunService:IsClient() then
 				if Players.LocalPlayer == self.player then
-					self._connections["MechanicReplication_" .. mechanicName] = self.mechanics[mechanicName].Toggled:Connect(
+					self._connections["MechanicReplication_" .. mechanicName] = self.mechanics[mechanicName].Toggling:Connect(
 						function(toggle: boolean)
 							ReplicationEvent:FireServer(
 								ControllerReplicationDict.update,
