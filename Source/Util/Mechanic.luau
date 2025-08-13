@@ -46,7 +46,7 @@ local function deepCopy(list: MechanicData)
 	return copy
 end
 
-function module.new(controller: MechanicController, name: string, data: MechanicData)
+function module.new(controller: MechanicController, name: string, data: MechanicData, passSelfInFunction: boolean)
 	local self = setmetatable(deepCopy(data), Mechanic) -- create new functions that take in the prefix and run the corresponding function
 	self.controller = controller
 	self.name = name
@@ -58,8 +58,14 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 
 	for functionName, _ in pairs(mechanicFunctions) do
 		if data[getMechanicPrefix(self) .. functionName] then
-			self["_" .. functionName] = function(...)
-				data[getMechanicPrefix(self) .. functionName](self.controller, ...)
+			if passSelfInFunction then
+				self["_" .. functionName] = function(...)
+					data[getMechanicPrefix(self) .. functionName](...)
+				end
+			else
+				self["_" .. functionName] = function(...)
+					data[getMechanicPrefix(self) .. functionName](self.controller, ...)
+				end
 			end
 		end
 	end
