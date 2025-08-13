@@ -40,6 +40,7 @@ export type Mechanic = {
 	_initialized: boolean,
 	_toggled: boolean,
 	_enabled: boolean?,
+	_connections: { RBXScriptConnection },
 
 	_initFunction: func,
 	_destroyFunction: func,

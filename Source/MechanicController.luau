@@ -82,6 +82,10 @@ local function loadMovementMechanics(self: MechanicController)
 	local mechanicDatas = {}
 	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
 		local datas = require(mechanicModule)
+		if typeof(datas) == "function" then
+			datas = datas(self)
+		end
+
 		if datas["data"] then
 			datas = { datas }
 		end
