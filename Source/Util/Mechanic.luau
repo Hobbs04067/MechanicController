@@ -8,6 +8,7 @@ local Bindable = require(Util.Bindable)
 type MechanicController = Types.MechanicController
 type Mechanic = Types.Mechanic
 type MechanicData = Types.MechanicData
+type Bindable = Types.Bindable
 
 local mechanicFunctions = {
 	initFunction = 0,
@@ -123,7 +124,7 @@ local function connectInputFunctions(self: Mechanic)
 	self.functionConnections = self.functionConnections or {}
 	self._connections = {}
 
-	for event, func: any in pairs(self.functionConnections) do
+	for func: (...any) -> (...any), event: BindableEvent | Bindable in pairs(self.functionConnections) do
 		table.insert(
 			self._connections,
 			event:Connect(function(...)

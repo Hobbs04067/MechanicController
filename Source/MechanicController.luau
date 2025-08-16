@@ -81,7 +81,7 @@ end
 local function loadMovementMechanics(self: MechanicController)
 	local mechanicDatas = {}
 	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
-		local datas = require(mechanicModule)
+		local datas = require(mechanicModule)(self)
 		if datas["data"] then
 			datas = { datas }
 		end
@@ -89,28 +89,18 @@ local function loadMovementMechanics(self: MechanicController)
 		for _, data: MechanicInfo in pairs(datas) do
 			local name = data["name"]
 			mechanicDatas[name] = data
-		end
-	end
 
-	for mechanicName: string, mechanicData: MechanicInfo in pairs(mechanicDatas) do
-		self.mechanics[mechanicName] = Mechanic.new(self, mechanicName, mechanicData.data)
+			self.mechanics[name] = Mechanic.new(self, name, data.data)
 
-		if
-			self.mechanics[mechanicName]["SERVER_toggleFunction"]
-			or self.mechanics[mechanicName]["REPLICATED_toggleFunction"]
-		then
-			if RunService:IsClient() then
-				if Players.LocalPlayer == self.player then
-					self._connections["MechanicReplication_" .. mechanicName] = self.mechanics[mechanicName].Toggling:Connect(
-						function(toggle: boolean)
-							ReplicationEvent:FireServer(
-								ControllerReplicationDict.update,
-								self.rig,
-								mechanicName,
-								toggle
-							)
-						end
-					)
+			if self.mechanics[name]["SERVER_toggleFunction"] or self.mechanics[name]["REPLICATED_toggleFunction"] then
+				if RunService:IsClient() then
+					if Players.LocalPlayer == self.player then
+						self._connections["MechanicReplication_" .. name] = self.mechanics[name].Toggling:Connect(
+							function(toggle: boolean)
+								ReplicationEvent:FireServer(ControllerReplicationDict.update, self.rig, name, toggle)
+							end
+						)
+					end
 				end
 			end
 		end
