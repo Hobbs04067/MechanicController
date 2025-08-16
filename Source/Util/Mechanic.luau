@@ -34,26 +34,14 @@ local function getMechanicPrefix(self: Mechanic)
 	return ""
 end
 
-local function deepCopy(list: MechanicData)
-	local copy = {}
-	for index: string, value: any in pairs(list) do
-		if type(value) == "table" then
-			copy[index] = deepCopy(value)
-		else
-			copy[index] = value
-		end
-	end
-
-	return copy
-end
-
 function module.new(controller: MechanicController, name: string, data: MechanicData)
-	local self = setmetatable(deepCopy(data), Mechanic) -- create new functions that take in the prefix and run the corresponding function
+	local self = setmetatable({}, Mechanic) -- create new functions that take in the prefix and run the corresponding function
 	self.controller = controller
 	self.name = name
 	self._initialized = false
 	self._toggled = false
 	self._enabled = nil
+	self._data = data
 
 	self.Toggled = Bindable.new()
 
@@ -121,16 +109,17 @@ function Mechanic.Destroy(self: Mechanic)
 end
 
 local function connectInputFunctions(self: Mechanic)
-	self.functionConnections = self.functionConnections or {}
 	self._connections = {}
 
-	for func: (...any) -> (...any), event: BindableEvent | Bindable in pairs(self.functionConnections) do
-		table.insert(
-			self._connections,
-			event:Connect(function(...)
-				func(self.controller, ...)
-			end)
-		)
+	if self._data.functionConnections then
+		for func: (...any) -> ...any, event: BindableEvent | Bindable in pairs(self._data.functionConnections) do
+			table.insert(
+				self._connections,
+				event:Connect(function(...)
+					func(self.controller, ...)
+				end)
+			)
+		end
 	end
 end
 

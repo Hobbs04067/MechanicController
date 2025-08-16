@@ -46,6 +46,7 @@ export type Mechanic = {
 	_destroyFunction: func,
 	_toggleFunction: func,
 	_cleanupFunction: func,
+	_data: MechanicData,
 
 	Toggled: Bindable,
 
