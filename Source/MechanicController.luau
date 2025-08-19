@@ -169,7 +169,12 @@ function Controller.Destroy(self: MechanicController)
 		mechanic:Destroy()
 	end
 
+	for _, connection: RBXScriptConnection in pairs(self._connections) do
+		connection:Disconnect()
+	end
+
 	table.clear(self)
+	setmetatable(self, nil)
 end
 
 module.Controllers = {}

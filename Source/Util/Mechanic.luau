@@ -106,6 +106,9 @@ function Mechanic.Destroy(self: Mechanic)
 			connection:Disconnect()
 		end
 	end
+
+	table.clear(self)
+	setmetatable(self, nil)
 end
 
 local function connectInputFunctions(self: Mechanic)
