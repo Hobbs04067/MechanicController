@@ -26,10 +26,10 @@ local ControllerReplicationDict = {
 }
 
 local bitPackBAndReferenceDict = {
-	replication_action = 3,
-	controller_id = 255,
-	mechanic_toggle = 1,
-	mechanic_id = 2^21-1,
+	replication_action = bit32.lshift(3, 30),
+	controller_id = bit32.lshift(255, 22),
+	mechanic_toggle = bit32.lshift(1, 21),
+	mechanic_id = 2 ^ 21 - 1,
 }
 
 local function bitPack(packData: BitPackData)
@@ -38,13 +38,13 @@ local function bitPack(packData: BitPackData)
 	local packedMechanicToggle = 0
 	local packedMechanicId = 0
 
-	if packData.mechanicToggle then
+	if packData.mechanicToggle ~= nil then
 		local num = 0
 		if packData.mechanicToggle == true then
 			num = 1
 		end
 		packedMechanicToggle = bit32.lshift(num, 21)
-		packedMechanicId = packData.mechanicId
+		packedMechanicId = packData.mechanicId - 1
 	end
 
 	return bit32.bor(packedReplicationAction, packedControllerId, packedMechanicToggle, packedMechanicId)
@@ -52,9 +52,9 @@ end
 
 local function bitUnpack(pack)
 	local unpackedReplicationAction = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.replication_action), 30)
-	local unpackedControllerId = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.replication_action), 22)
+	local unpackedControllerId = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.controller_id), 22)
 	local unpackedMechanicToggle = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.mechanic_toggle), 21)
-	local unpackedMechanicId = bit32.band(pack, bitPackBAndReferenceDict.mechanic_id)
+	local unpackedMechanicId = bit32.band(pack, bitPackBAndReferenceDict.mechanic_id) + 1
 
 	return unpackedReplicationAction, unpackedControllerId, unpackedMechanicToggle == 1, unpackedMechanicId
 end
@@ -75,18 +75,17 @@ local module = {
 	PlayerReplicated = Bindable.new(),
 }
 
-for i = 0, 255, 1 do
-	table.insert(module._availableControllerIds, i)
-end
-
 module.MechanicDataModules = {}
 
 function module.addMechanicModule(mechanicModule: ModuleScript)
 	if RunService:IsServer() then
-		ReplicationEvent:FireAllClients(bitPack({
-			replicationAction = ControllerReplicationDict.add_mechanics, 
-			controllerId = 0
-		}), mechanicModule)
+		ReplicationEvent:FireAllClients(
+			bitPack({
+				replicationAction = ControllerReplicationDict.add_mechanics,
+				controllerId = 0,
+			}),
+			mechanicModule
+		)
 	end
 
 	if not table.find(module.MechanicDataModules, mechanicModule) then
@@ -139,16 +138,19 @@ local function loadMovementMechanics(self: MechanicController)
 
 			self.mechanics[name] = Mechanic.new(self, name, data.data)
 
-			if self.mechanics[name]["SERVER_toggleFunction"] or self.mechanics[name]["REPLICATED_toggleFunction"] then
+			if
+				self.mechanics[name]._data["SERVER_toggleFunction"]
+				or self.mechanics[name]._data["REPLICATED_toggleFunction"]
+			then
 				if RunService:IsClient() then
 					if Players.LocalPlayer == self.player then
-						self._connections["MechanicReplication_" .. name] = self.mechanics[name].Toggling:Connect(
+						self._connections["MechanicReplication_" .. name] = self.mechanics[name].Toggled:Connect(
 							function(toggle: boolean)
 								ReplicationEvent:FireServer(bitPack({
 									replicationAction = ControllerReplicationDict.update,
 									controllerId = self.id,
 									mechanicToggle = toggle,
-									mechanicId = self.mechanics[name]._id
+									mechanicId = self.mechanics[name]._id,
 								}))
 							end
 						)
@@ -168,22 +170,18 @@ local function loadMovementMechanics(self: MechanicController)
 		return aOrder < bOrder
 	end)
 
-	for _, key: string in pairs(keys) do
+	for id: number, key: string in pairs(keys) do
 		local mechanic = self.mechanics[key]
+		mechanic._id = id
 		mechanic:Init()
 		mechanic._toggled = mechanicDatas[key].toggledOnStart or false
 		mechanic:Enable(mechanicDatas[key].enabledOnStart or false)
 	end
 
-	self._indexedMechanics = {}
-	local i = 1
-	for name: string, mechanic: Mechanic in pairs(self.mechanics) do
-		self._indexedMechanics[i] = name
-		mechanic._id = i
-	end
+	self._indexedMechanics = keys
 end
 
-function module.new(player: Player, id: number): MechanicController
+local new = function(player: Player, id: number): MechanicController
 	local characterRig = player.Character
 
 	for charRequisite: string, _ in pairs(coreRigComponents) do
@@ -204,6 +202,10 @@ function module.new(player: Player, id: number): MechanicController
 
 	module.ConstructingPostMechanics:Fire(self)
 
+	if module.Controllers[self.rig] then
+		module.Controllers[self.rig]:Destroy()
+	end
+
 	module.Controllers[self.rig] = self
 	module._idControllerReference[self.id] = self
 
@@ -212,23 +214,36 @@ end
 
 if RunService:IsServer() then
 	module._availableControllerIds = {}
-	
-	for i=0, 255, 1 do
+
+	for i = 0, 255, 1 do
 		table.insert(module._availableControllerIds, i)
 	end
 
-	local new = module.new
 	module.new = function(player: Player)
-		local self = new(player, module._availableControllerIds[1])
-		table.remove(module._availableControllerIds, 1)
-		ReplicationEvent:FireAllClients(bitPack({
-			replicationAction = ControllerReplicationDict.construct,
-			controllerId = self.id
-		}), player)
-		setupConnections(self)
+		local character = player.Character
+		if character then
+			if module.Controllers[character] then
+				module.Controllers[character]:Destroy()
+			end
 
-		return self
+			local self = new(player, module._availableControllerIds[1])
+			table.remove(module._availableControllerIds, 1)
+			ReplicationEvent:FireAllClients(
+				bitPack({
+					replicationAction = ControllerReplicationDict.construct,
+					controllerId = self.id,
+				}),
+				player
+			)
+			setupConnections(self)
+
+			return self
+		else
+			error("MechanicController Error: Character of player not found or loaded.")
+		end
 	end
+elseif RunService:IsClient() then
+	module.new = new
 end
 
 function Controller.Destroy(self: MechanicController)
@@ -238,7 +253,7 @@ function Controller.Destroy(self: MechanicController)
 	if RunService:IsServer() then
 		ReplicationEvent:FireAllClients(bitPack({
 			replicationAction = ControllerReplicationDict.destroy,
-			controllerId = self.id
+			controllerId = self.id,
 		}))
 
 		table.insert(module._availableControllerIds, self.id)
@@ -260,46 +275,50 @@ end
 
 if RunService:IsServer() then
 	Players.PlayerAdded:Connect(function(player: Player)
-
 		for _, controller: MechanicController in pairs(module.Controllers) do
 			if controller.player ~= player then
-				ReplicationEvent:FireClient(bitPack({
-					replicationAction = ControllerReplicationDict.construct,
-					controllerId = controller.id
-				}), controller.player)
+				ReplicationEvent:FireClient(
+					bitPack({
+						replicationAction = ControllerReplicationDict.construct,
+						controllerId = controller.id,
+					}),
+					controller.player
+				)
 			end
 		end
 
 		for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
-			ReplicationEvent:FireClient(player, bitPack({
-				replicationAction = ControllerReplicationDict.add_mechanics, 
-				controllerId = 0
-			}), mechanicModule)
+			ReplicationEvent:FireClient(
+				player,
+				bitPack({
+					replicationAction = ControllerReplicationDict.add_mechanics,
+					controllerId = 0,
+				}),
+				mechanicModule
+			)
 		end
 
 		module.PlayerReplicated:Fire(player)
 	end)
 
-	ReplicationEvent.OnServerEvent:Connect(
-		function(player: Player, packData: number)
-			local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
+	ReplicationEvent.OnServerEvent:Connect(function(player: Player, packData: number)
+		local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
 
-			if event == ControllerReplicationDict.update then
-				local controller: MechanicController = module._idControllerReference[controllerId]
-				if controller then
-					controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
+		if event == ControllerReplicationDict.update then
+			local controller: MechanicController = module._idControllerReference[controllerId]
+			if controller then
+				controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
 
-					if controller.mechanics[controller._indexedMechanics[mechanicId]]["REPLICATED_toggleFunction"] then
-						for _, iPlayer: Player in pairs(Players:GetPlayers()) do
-							if iPlayer ~= player then
-								ReplicationEvent:FireClient(iPlayer, packData)
-							end
+				if controller.mechanics[controller._indexedMechanics[mechanicId]]["REPLICATED_toggleFunction"] then
+					for _, iPlayer: Player in pairs(Players:GetPlayers()) do
+						if iPlayer ~= player then
+							ReplicationEvent:FireClient(iPlayer, packData)
 						end
 					end
 				end
 			end
 		end
-	)
+	end)
 else
 	ReplicationEvent.OnClientEvent:Connect(function(packData: number, ...)
 		local args = { ... }
@@ -307,11 +326,11 @@ else
 		local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
 
 		if event == ControllerReplicationDict.construct then
-			--[[local controller = ]]
-			module.new(args[1], controllerId)
+			local _controller = module.new(args[1], controllerId)
 		elseif event == ControllerReplicationDict.destroy then
-			if module._idControllerReference[controllerId] then
-				module._idControllerReference[controllerId]:Destroy()
+			local controller = module._idControllerReference[controllerId]
+			if controller then
+				controller:Destroy()
 			end
 		elseif event == ControllerReplicationDict.update then
 			local controller: MechanicController = module._idControllerReference[controllerId]
