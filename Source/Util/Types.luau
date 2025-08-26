@@ -59,16 +59,25 @@ export type Mechanic = {
 	IsDisabled: func,
 	IsToggled: func,
 	IsUsing: func,
-}
+} & { _id: number }
 
 export type MechanicController = {
+	id: number,
 	rig: Model,
 	player: Player,
 	mechanics: { [string]: Mechanic },
 
 	_connections: { [string]: RBXScriptConnection },
+	_indexedMechanics: { [number]: string },
 
 	Destroy: func,
+}
+
+export type BitPackData = {
+	replicationAction: number,
+	controllerId: number,
+	mechanicToggle: boolean?,
+	mechanicId: number?,
 }
 
 return nil
