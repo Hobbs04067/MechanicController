@@ -1,20 +1,20 @@
-type func = (...any) -> ...any
+type mechanic_function = (self: MechanicController, ...any) -> nil
 
 export type MechanicData = {
-	initFunction: func,
-	SERVER_initFunction: func,
-	REPLICATED_initFunction: func,
-	destroyFunction: func,
-	SERVER_destroyFunction: func,
-	REPLICATED_destroyFunction: func,
-	toggleFunction: func,
-	SERVER_toggleFunction: func,
-	REPLICATED_toggleFunction: func,
-	cleanupFunction: func,
-	SERVER_cleanupFunction: func,
-	REPLICATED_cleanupFunction: func,
+	initFunction: mechanic_function,
+	SERVER_initFunction: mechanic_function,
+	REPLICATED_initFunction: mechanic_function,
+	destroyFunction: mechanic_function,
+	SERVER_destroyFunction: mechanic_function,
+	REPLICATED_destroyFunction: mechanic_function,
+	toggleFunction: mechanic_function,
+	SERVER_toggleFunction: mechanic_function,
+	REPLICATED_toggleFunction: mechanic_function,
+	cleanupFunction: mechanic_function,
+	SERVER_cleanupFunction: mechanic_function,
+	REPLICATED_cleanupFunction: mechanic_function,
 
-	functionConnections: { [RBXScriptSignal]: func },
+	functionConnections: { [RBXScriptSignal]: mechanic_function },
 }
 
 export type MechanicInfo = {
@@ -26,11 +26,11 @@ export type MechanicInfo = {
 }
 
 export type Bindable = {
-	_connections: { func },
+	_connections: { [string]: RBXScriptConnection },
 
-	Connect: func,
-	Fire: func,
-	Destroy: func,
+	Connect: (self: Bindable, func: (...any) -> (...any)) -> nil,
+	Fire: (self: Bindable) -> nil,
+	Destroy: (self: Bindable) -> nil,
 }
 
 export type Mechanic = {
@@ -42,23 +42,23 @@ export type Mechanic = {
 	_enabled: boolean?,
 	_connections: { RBXScriptConnection },
 
-	_initFunction: func,
-	_destroyFunction: func,
-	_toggleFunction: func,
-	_cleanupFunction: func,
+	_initFunction: mechanic_function,
+	_destroyFunction: mechanic_function,
+	_toggleFunction: mechanic_function,
+	_cleanupFunction: mechanic_function,
 	_data: MechanicData,
 
 	Toggled: Bindable,
 
-	Toggle: func,
-	Enable: func,
-	Disable: func,
-	Destroy: func,
-	Init: func,
-	IsEnabled: func,
-	IsDisabled: func,
-	IsToggled: func,
-	IsUsing: func,
+	Toggle: (self: Mechanic, toggle: boolean) -> nil,
+	Enable: (self: Mechanic, toggle: boolean) -> nil,
+	Disable: (self: Mechanic, toggle: boolean) -> nil,
+	Destroy: (self: Mechanic) -> nil,
+	Init: (self: Mechanic) -> nil,
+	IsEnabled: (self: Mechanic) -> boolean,
+	IsDisabled: (self: Mechanic) -> boolean,
+	IsToggled: (self: Mechanic) -> boolean,
+	IsUsing: (self: Mechanic) -> boolean,
 } & { _id: number }
 
 export type MechanicController = {
@@ -70,7 +70,7 @@ export type MechanicController = {
 	_connections: { [string]: RBXScriptConnection },
 	_indexedMechanics: { [number]: string },
 
-	Destroy: func,
+	Destroy: (self: MechanicController) -> nil,
 }
 
 export type BitPackData = {

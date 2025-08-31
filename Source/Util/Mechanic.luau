@@ -90,11 +90,11 @@ function Mechanic.Enable(self: Mechanic, toggle: boolean)
 	end
 end
 
-function Mechanic.Disable(self: Mechanic, toggle: boolean, starterPlayer: Player)
+function Mechanic.Disable(self: Mechanic, toggle: boolean)
 	if toggle == nil then
 		toggle = true
 	end
-	self:Enable(not toggle, starterPlayer, "Disable")
+	self:Enable(not toggle)
 end
 
 function Mechanic.Destroy(self: Mechanic)
