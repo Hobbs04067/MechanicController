@@ -277,6 +277,7 @@ local function replicateToPlayer(player: Player)
 	for _, controller: MechanicController in pairs(module.Controllers) do
 		if controller.player ~= player then
 			ReplicationEvent:FireClient(
+				player,
 				bitPack({
 					replicationAction = ControllerReplicationDict.construct,
 					controllerId = controller.id,
