@@ -274,6 +274,17 @@ function Controller.Destroy(self: MechanicController)
 end
 
 local function replicateToPlayer(player: Player)
+	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
+		ReplicationEvent:FireClient(
+			player,
+			bitPack({
+				replicationAction = ControllerReplicationDict.add_mechanics,
+				controllerId = 0,
+			}),
+			mechanicModule
+		)
+	end
+
 	for _, controller: MechanicController in pairs(module.Controllers) do
 		if controller.player ~= player then
 			ReplicationEvent:FireClient(
@@ -285,17 +296,6 @@ local function replicateToPlayer(player: Player)
 				controller.player
 			)
 		end
-	end
-
-	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
-		ReplicationEvent:FireClient(
-			player,
-			bitPack({
-				replicationAction = ControllerReplicationDict.add_mechanics,
-				controllerId = 0,
-			}),
-			mechanicModule
-		)
 	end
 
 	module.PlayerReplicated:Fire(player)
