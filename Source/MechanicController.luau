@@ -273,33 +273,41 @@ function Controller.Destroy(self: MechanicController)
 	setmetatable(self, nil)
 end
 
-if RunService:IsServer() then
-	Players.PlayerAdded:Connect(function(player: Player)
-		for _, controller: MechanicController in pairs(module.Controllers) do
-			if controller.player ~= player then
-				ReplicationEvent:FireClient(
-					bitPack({
-						replicationAction = ControllerReplicationDict.construct,
-						controllerId = controller.id,
-					}),
-					controller.player
-				)
-			end
-		end
-
-		for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
+local function replicateToPlayer(player: Player)
+	for _, controller: MechanicController in pairs(module.Controllers) do
+		if controller.player ~= player then
 			ReplicationEvent:FireClient(
-				player,
 				bitPack({
-					replicationAction = ControllerReplicationDict.add_mechanics,
-					controllerId = 0,
+					replicationAction = ControllerReplicationDict.construct,
+					controllerId = controller.id,
 				}),
-				mechanicModule
+				controller.player
 			)
 		end
+	end
 
-		module.PlayerReplicated:Fire(player)
+	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
+		ReplicationEvent:FireClient(
+			player,
+			bitPack({
+				replicationAction = ControllerReplicationDict.add_mechanics,
+				controllerId = 0,
+			}),
+			mechanicModule
+		)
+	end
+
+	module.PlayerReplicated:Fire(player)
+end
+
+if RunService:IsServer() then
+	Players.PlayerAdded:Connect(function(player: Player)
+		replicateToPlayer(player)
 	end)
+
+	for _, player: Player in pairs(Players:GetPlayers()) do
+		replicateToPlayer(player)
+	end
 
 	ReplicationEvent.OnServerEvent:Connect(function(player: Player, packData: number)
 		local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
