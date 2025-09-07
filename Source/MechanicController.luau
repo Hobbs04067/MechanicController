@@ -318,7 +318,7 @@ if RunService:IsServer() then
 			if controller then
 				controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
 
-				if controller.mechanics[controller._indexedMechanics[mechanicId]]["REPLICATED_toggleFunction"] then
+				if controller.mechanics[controller._indexedMechanics[mechanicId]]._data["REPLICATED_toggleFunction"] then
 					for _, iPlayer: Player in pairs(Players:GetPlayers()) do
 						if iPlayer ~= player then
 							ReplicationEvent:FireClient(iPlayer, packData)
