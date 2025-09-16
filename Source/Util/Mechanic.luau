@@ -68,18 +68,18 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 	return self
 end
 
-function Mechanic.Toggle(self: Mechanic, toggle: boolean)
+function Mechanic.Toggle(self: Mechanic, toggle: boolean, ...)
 	if self._enabled and self._toggled ~= toggle then
 		self.Toggled:Fire(toggle)
 
-		self._cleanupFunction()
-		self._toggleFunction(toggle)
+		self._cleanupFunction(...)
+		self._toggleFunction(toggle, ...)
 	end
 
 	self._toggled = toggle
 end
 
-function Mechanic.Enable(self: Mechanic, toggle: boolean)
+function Mechanic.Enable(self: Mechanic, toggle: boolean, ...)
 	if toggle == nil then
 		toggle = true
 	end
@@ -87,25 +87,25 @@ function Mechanic.Enable(self: Mechanic, toggle: boolean)
 	if self._enabled ~= toggle then
 		self._enabled = toggle
 		if toggle then
-			self._cleanupFunction()
-			self._toggleFunction(self._toggled)
+			self._cleanupFunction(...)
+			self._toggleFunction(self._toggled, ...)
 		elseif not toggle and self._toggled then
-			self._toggleFunction(false)
-			self._cleanupFunction()
+			self._toggleFunction(false, ...)
+			self._cleanupFunction(...)
 		end
 	end
 end
 
-function Mechanic.Disable(self: Mechanic, toggle: boolean)
+function Mechanic.Disable(self: Mechanic, toggle: boolean, ...)
 	if toggle == nil then
 		toggle = true
 	end
-	self:Enable(not toggle)
+	self:Enable(not toggle, ...)
 end
 
-function Mechanic.Destroy(self: Mechanic)
-	self._cleanupFunction()
-	self._destroyFunction()
+function Mechanic.Destroy(self: Mechanic, ...)
+	self._cleanupFunction(...)
+	self._destroyFunction(...)
 
 	if getMechanicPrefix(self) == "" then
 		for _, connection: RBXScriptConnection in pairs(self._connections) do
@@ -132,11 +132,11 @@ local function connectInputFunctions(self: Mechanic)
 	end
 end
 
-function Mechanic.Init(self: Mechanic)
+function Mechanic.Init(self: Mechanic, ...)
 	if not self._initialized then
 		self._initialized = true
 
-		self._initFunction()
+		self._initFunction(...)
 
 		if getMechanicPrefix(self) == "" then
 			connectInputFunctions(self)
