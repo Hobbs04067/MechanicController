@@ -53,6 +53,12 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 		end
 	end
 
+	for key, value in pairs(data) do
+		if not mechanicFunctions[key] then
+			self[key] = value
+		end
+	end
+
 	for functionIndex: string, _ in pairs(mechanicFunctions) do
 		if not self["_" .. functionIndex] then
 			self["_" .. functionIndex] = function() end
