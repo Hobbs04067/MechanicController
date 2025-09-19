@@ -1,5 +1,6 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
 
 local ReplicationEvent = script.Parent.ReplicateController
 
@@ -243,7 +244,31 @@ if RunService:IsServer() then
 		end
 	end
 elseif RunService:IsClient() then
-	module.new = new
+	module.new = function(player: Player, controllerId: number)
+		local self = new(player, controllerId)
+
+		self._resetBindableEvent = Instance.new("BindableEvent")
+		self.PlayerReset = self._resetBindableEvent.Event
+
+		local success = false
+
+		repeat
+			success = pcall(function()
+				StarterGui:SetCore("ResetButtonCallback", self._resetBindableEvent)
+			end)
+
+			task.wait(0.1)
+		until success
+
+		self._connections["ResetButtonPressed"] = self.PlayerReset:Connect(function()
+			ReplicationEvent:FireServer(bitPack({
+				replicationAction = ControllerReplicationDict.destroy,
+				controllerId = self.id,
+			}))
+		end)
+
+		return self
+	end
 end
 
 function Controller.Destroy(self: MechanicController)
@@ -257,6 +282,8 @@ function Controller.Destroy(self: MechanicController)
 		}))
 
 		table.insert(module._availableControllerIds, self.id)
+	else
+		self._resetBindableEvent:Destroy()
 	end
 
 	module.Destructing:Fire(self)
@@ -318,13 +345,20 @@ if RunService:IsServer() then
 			if controller then
 				controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
 
-				if controller.mechanics[controller._indexedMechanics[mechanicId]]._data["REPLICATED_toggleFunction"] then
+				if
+					controller.mechanics[controller._indexedMechanics[mechanicId]]._data["REPLICATED_toggleFunction"]
+				then
 					for _, iPlayer: Player in pairs(Players:GetPlayers()) do
 						if iPlayer ~= player then
 							ReplicationEvent:FireClient(iPlayer, packData)
 						end
 					end
 				end
+			end
+		elseif event == ControllerReplicationDict.destroy then
+			local controller: MechanicController = module._idControllerReference[controllerId]
+			if controller then
+				controller.rig.Humanoid.Health = 0
 			end
 		end
 	end)

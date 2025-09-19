@@ -28,7 +28,7 @@ export type MechanicInfo = {
 export type Bindable = {
 	_connections: { [string]: RBXScriptConnection },
 
-	Connect: (self: Bindable, func: (...any) -> (...any)) -> nil,
+	Connect: (self: Bindable, func: (...any) -> ...any) -> nil,
 	Fire: (self: Bindable) -> nil,
 	Destroy: (self: Bindable) -> nil,
 }
@@ -66,9 +66,11 @@ export type MechanicController = {
 	rig: Model,
 	player: Player,
 	mechanics: { [string]: Mechanic },
+	PlayerReset: RBXScriptSignal,
 
 	_connections: { [string]: RBXScriptConnection },
 	_indexedMechanics: { [number]: string },
+	_resetBindableEvent: BindableEvent,
 
 	Destroy: (self: MechanicController) -> nil,
 }
