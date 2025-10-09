@@ -275,6 +275,24 @@ function Controller.Destroy(self: MechanicController)
 	module.Controllers[self.rig] = nil
 	module._idControllerReference[self.id] = nil
 
+	local missingCoreComponent = false
+	for rigComponentName: string, _ in pairs(coreRigComponents) do
+		if not self.rig:FindFirstChild(rigComponentName, true) then
+			missingCoreComponent = true
+			break
+		end
+	end
+
+	if not missingCoreComponent then
+		for _, mechanic: Mechanic in pairs(self.mechanics) do
+			mechanic:Disable()
+		end
+	end
+
+	for _, mechanic: Mechanic in pairs(self.mechanics) do
+		mechanic:Destroy()
+	end
+
 	if RunService:IsServer() then
 		ReplicationEvent:FireAllClients(bitPack({
 			replicationAction = ControllerReplicationDict.destroy,
@@ -287,10 +305,6 @@ function Controller.Destroy(self: MechanicController)
 	end
 
 	module.Destructing:Fire(self)
-
-	for _, mechanic: Mechanic in pairs(self.mechanics) do
-		mechanic:Destroy()
-	end
 
 	for _, connection: RBXScriptConnection in pairs(self._connections) do
 		connection:Disconnect()
