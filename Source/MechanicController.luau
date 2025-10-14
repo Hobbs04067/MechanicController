@@ -8,6 +8,8 @@ local Util = script.Parent.Util
 local Types = require(Util.Types)
 local Bindable = require(Util.Bindable)
 local Mechanic = require(Util.Mechanic)
+local Enums = require(Util.Enums)
+local Networking = require(Util.Networking)
 
 type MechanicController = Types.MechanicController
 type Mechanic = Types.Mechanic
@@ -18,47 +20,6 @@ local coreRigComponents = {
 	HumanoidRootPart = 1,
 	Humanoid = 1,
 }
-
-local ControllerReplicationDict = {
-	construct = 0,
-	update = 1,
-	destroy = 2,
-	add_mechanics = 3,
-}
-
-local bitPackBAndReferenceDict = {
-	replication_action = bit32.lshift(3, 30),
-	controller_id = bit32.lshift(255, 22),
-	mechanic_toggle = bit32.lshift(1, 21),
-	mechanic_id = 2 ^ 21 - 1,
-}
-
-local function bitPack(packData: BitPackData)
-	local packedReplicationAction = bit32.lshift(packData.replicationAction, 30)
-	local packedControllerId = bit32.lshift(packData.controllerId, 22)
-	local packedMechanicToggle = 0
-	local packedMechanicId = 0
-
-	if packData.mechanicToggle ~= nil then
-		local num = 0
-		if packData.mechanicToggle == true then
-			num = 1
-		end
-		packedMechanicToggle = bit32.lshift(num, 21)
-		packedMechanicId = packData.mechanicId - 1
-	end
-
-	return bit32.bor(packedReplicationAction, packedControllerId, packedMechanicToggle, packedMechanicId)
-end
-
-local function bitUnpack(pack)
-	local unpackedReplicationAction = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.replication_action), 30)
-	local unpackedControllerId = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.controller_id), 22)
-	local unpackedMechanicToggle = bit32.rshift(bit32.band(pack, bitPackBAndReferenceDict.mechanic_toggle), 21)
-	local unpackedMechanicId = bit32.band(pack, bitPackBAndReferenceDict.mechanic_id) + 1
-
-	return unpackedReplicationAction, unpackedControllerId, unpackedMechanicToggle == 1, unpackedMechanicId
-end
 
 local Controller = {}
 Controller.__index = Controller
@@ -81,8 +42,8 @@ module.MechanicDataModules = {}
 function module.addMechanicModule(mechanicModule: ModuleScript)
 	if RunService:IsServer() then
 		ReplicationEvent:FireAllClients(
-			bitPack({
-				replicationAction = ControllerReplicationDict.add_mechanics,
+			Networking.bitPack({
+				replicationAction = Enums.ControllerReplicationAction.AddMechanic,
 				controllerId = 0,
 			}),
 			mechanicModule
@@ -138,26 +99,6 @@ local function loadMovementMechanics(self: MechanicController)
 			mechanicDatas[name] = data
 
 			self.mechanics[name] = Mechanic.new(self, name, data.data)
-
-			if
-				self.mechanics[name]._data["SERVER_toggleFunction"]
-				or self.mechanics[name]._data["REPLICATED_toggleFunction"]
-			then
-				if RunService:IsClient() then
-					if Players.LocalPlayer == self.player then
-						self._connections["MechanicReplication_" .. name] = self.mechanics[name].Toggled:Connect(
-							function(toggle: boolean)
-								ReplicationEvent:FireServer(bitPack({
-									replicationAction = ControllerReplicationDict.update,
-									controllerId = self.id,
-									mechanicToggle = toggle,
-									mechanicId = self.mechanics[name]._id,
-								}))
-							end
-						)
-					end
-				end
-			end
 		end
 	end
 
@@ -171,12 +112,12 @@ local function loadMovementMechanics(self: MechanicController)
 		return aOrder < bOrder
 	end)
 
-	for id: number, key: string in pairs(keys) do
+	for id: number, key: string in ipairs(keys) do
 		local mechanic = self.mechanics[key]
 		mechanic._id = id
 		mechanic:Init()
 		mechanic._toggled = mechanicDatas[key].toggledOnStart or false
-		mechanic:Enable(mechanicDatas[key].enabledOnStart or false)
+		mechanic:SoftEnable(mechanicDatas[key].enabledOnStart or false)
 	end
 
 	self._indexedMechanics = keys
@@ -230,8 +171,8 @@ if RunService:IsServer() then
 			local self = new(player, module._availableControllerIds[1])
 			table.remove(module._availableControllerIds, 1)
 			ReplicationEvent:FireAllClients(
-				bitPack({
-					replicationAction = ControllerReplicationDict.construct,
+				Networking.bitPack({
+					replicationAction = Enums.ControllerReplicationAction.Construct,
 					controllerId = self.id,
 				}),
 				player
@@ -261,8 +202,8 @@ elseif RunService:IsClient() then
 		until success
 
 		self._connections["ResetButtonPressed"] = self.PlayerReset:Connect(function()
-			ReplicationEvent:FireServer(bitPack({
-				replicationAction = ControllerReplicationDict.destroy,
+			ReplicationEvent:FireServer(Networking.bitPack({
+				replicationAction = Enums.ControllerReplicationAction.Detruct,
 				controllerId = self.id,
 			}))
 		end)
@@ -294,8 +235,8 @@ function Controller.Destroy(self: MechanicController)
 	end
 
 	if RunService:IsServer() then
-		ReplicationEvent:FireAllClients(bitPack({
-			replicationAction = ControllerReplicationDict.destroy,
+		ReplicationEvent:FireAllClients(Networking.bitPack({
+			replicationAction = Enums.ControllerReplicationAction.Detruct,
 			controllerId = self.id,
 		}))
 
@@ -318,8 +259,8 @@ local function replicateToPlayer(player: Player)
 	for _, mechanicModule: ModuleScript in pairs(module.MechanicDataModules) do
 		ReplicationEvent:FireClient(
 			player,
-			bitPack({
-				replicationAction = ControllerReplicationDict.add_mechanics,
+			Networking.bitPack({
+				replicationAction = Enums.ControllerReplicationAction.AddMechanic,
 				controllerId = 0,
 			}),
 			mechanicModule
@@ -330,8 +271,8 @@ local function replicateToPlayer(player: Player)
 		if controller.player ~= player then
 			ReplicationEvent:FireClient(
 				player,
-				bitPack({
-					replicationAction = ControllerReplicationDict.construct,
+				Networking.bitPack({
+					replicationAction = Enums.ControllerReplicationAction.Construct,
 					controllerId = controller.id,
 				}),
 				controller.player
@@ -352,12 +293,12 @@ if RunService:IsServer() then
 	end
 
 	ReplicationEvent.OnServerEvent:Connect(function(player: Player, packData: number)
-		local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
+		local event, controllerId, mechanicBoolean, mechanicId = Networking.bitUnpack(packData)
 
-		if event == ControllerReplicationDict.update then
+		if event == Enums.ControllerReplicationAction.UpdateToggle then
 			local controller: MechanicController = module._idControllerReference[controllerId]
 			if controller then
-				controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
+				controller.mechanics[controller._indexedMechanics[mechanicId]]:SoftToggle(mechanicBoolean)
 
 				if
 					controller.mechanics[controller._indexedMechanics[mechanicId]]._data["REPLICATED_toggleFunction"]
@@ -369,7 +310,22 @@ if RunService:IsServer() then
 					end
 				end
 			end
-		elseif event == ControllerReplicationDict.destroy then
+		elseif event == Enums.ControllerReplicationAction.UpdateEnable then
+			local controller: MechanicController = module._idControllerReference[controllerId]
+			if controller then
+				controller.mechanics[controller._indexedMechanics[mechanicId]]:SoftEnable(mechanicBoolean)
+
+				if
+					controller.mechanics[controller._indexedMechanics[mechanicId]]._data["REPLICATED_toggleFunction"]
+				then
+					for _, iPlayer: Player in pairs(Players:GetPlayers()) do
+						if iPlayer ~= player then
+							ReplicationEvent:FireClient(iPlayer, packData)
+						end
+					end
+				end
+			end
+		elseif event == Enums.ControllerReplicationAction.Detruct then
 			local controller: MechanicController = module._idControllerReference[controllerId]
 			if controller then
 				controller.rig.Humanoid.Health = 0
@@ -380,21 +336,26 @@ else
 	ReplicationEvent.OnClientEvent:Connect(function(packData: number, ...)
 		local args = { ... }
 
-		local event, controllerId, mechanicToggle, mechanicId = bitUnpack(packData)
+		local event, controllerId, mechanicBoolean, mechanicId = Networking.bitUnpack(packData)
 
-		if event == ControllerReplicationDict.construct then
+		if event == Enums.ControllerReplicationAction.Construct then
 			local _controller = module.new(args[1], controllerId)
-		elseif event == ControllerReplicationDict.destroy then
+		elseif event == Enums.ControllerReplicationAction.Detruct then
 			local controller = module._idControllerReference[controllerId]
 			if controller then
 				controller:Destroy()
 			end
-		elseif event == ControllerReplicationDict.update then
+		elseif event == Enums.ControllerReplicationAction.UpdateToggle then
 			local controller: MechanicController = module._idControllerReference[controllerId]
 			if controller then
-				controller.mechanics[controller._indexedMechanics[mechanicId]]:Toggle(mechanicToggle)
+				controller.mechanics[controller._indexedMechanics[mechanicId]]:SoftToggle(mechanicBoolean)
 			end
-		elseif event == ControllerReplicationDict.add_mechanics then
+		elseif event == Enums.ControllerReplicationAction.UpdateEnable then
+			local controller: MechanicController = module._idControllerReference[controllerId]
+			if controller then
+				controller.mechanics[controller._indexedMechanics[mechanicId]]:SoftEnable(mechanicBoolean)
+			end
+		elseif event == Enums.ControllerReplicationAction.AddMechanic then
 			module.addMechanicModule(args[1])
 		end
 	end)

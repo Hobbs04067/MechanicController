@@ -51,7 +51,9 @@ export type Mechanic = {
 	Toggled: Bindable,
 
 	Toggle: (self: Mechanic, toggle: boolean) -> nil,
+	SoftToggle: (self: Mechanic, toggle: boolean) -> nil,
 	Enable: (self: Mechanic, toggle: boolean) -> nil,
+	SoftEnable: (self: Mechanic, toggle: boolean) -> nil,
 	Disable: (self: Mechanic, toggle: boolean) -> nil,
 	Destroy: (self: Mechanic) -> nil,
 	Init: (self: Mechanic) -> nil,
@@ -76,9 +78,9 @@ export type MechanicController = {
 }
 
 export type BitPackData = {
-	replicationAction: number,
+	replicationAction: typeof(require(script.Parent.Enums).ControllerReplicationAction),
 	controllerId: number,
-	mechanicToggle: boolean?,
+	mechanicBoolean: boolean?,
 	mechanicId: number?,
 }
 

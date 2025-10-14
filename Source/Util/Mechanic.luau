@@ -1,14 +1,22 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
+local ReplicationEvent = script.Parent.Parent.ReplicateController
+
 local Util = script.Parent
 local Types = require(Util.Types)
 local Bindable = require(Util.Bindable)
+local Enums = require(Util.Enums)
+local Networking = require(Util.Networking)
 
 type MechanicController = Types.MechanicController
 type Mechanic = Types.Mechanic
 type MechanicData = Types.MechanicData
 type Bindable = Types.Bindable
+
+local function shouldReplicate(self: Mechanic)
+	return self._data["REPLICATED_initFunction"] or self._data["REPLICATED_destroyFunction"] or self._data["REPLICATED_toggleFunction"] or self._data["REPLICATED_cleanupFunction"]
+end
 
 local mechanicFunctions = {
 	initFunction = 0,
@@ -44,6 +52,8 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 	self._data = data
 
 	self.Toggled = Bindable.new()
+	self.Enabled = Bindable.new()
+	self.Disabled = Bindable.new()
 
 	for functionName, _ in pairs(mechanicFunctions) do
 		if data[getMechanicPrefix(self) .. functionName] then
@@ -68,10 +78,8 @@ function module.new(controller: MechanicController, name: string, data: Mechanic
 	return self
 end
 
-function Mechanic.Toggle(self: Mechanic, toggle: boolean, ...)
+local function Toggle(self: Mechanic, toggle: boolean, ...)
 	if self._enabled and self._toggled ~= toggle then
-		self.Toggled:Fire(toggle)
-
 		self._cleanupFunction(...)
 		self._toggleFunction(toggle, ...)
 	end
@@ -79,12 +87,61 @@ function Mechanic.Toggle(self: Mechanic, toggle: boolean, ...)
 	self._toggled = toggle
 end
 
-function Mechanic.Enable(self: Mechanic, toggle: boolean, ...)
+if RunService:IsServer() then
+	Mechanic.SoftToggle = function(self: Mechanic, toggle: boolean, ...)
+		self.Toggled:Fire(toggle)
+
+		Toggle(self, toggle, ...)
+	end
+
+	Mechanic.Toggle = function(self: Mechanic, toggle: boolean, ...)
+		ReplicationEvent:FireClient(
+			self.controller.player,
+			Networking.bitPack({
+				replicationAction = Enums.ControllerReplicationAction.UpdateToggle,
+				controllerId = self.controller.id,
+				mechanicBoolean = toggle,
+				mechanicId = self._id,
+			})
+		)
+
+		self:SoftToggle(toggle, ...)
+	end
+else
+	Mechanic.SoftToggle = function(self: Mechanic, toggle: boolean, ...)
+		self.Toggled:Fire(toggle)
+
+		Toggle(self, toggle, ...)
+	end
+
+	Mechanic.Toggle = function(self: Mechanic, toggle: boolean, ...)
+		if shouldReplicate(self) and self.controller.player == Players.LocalPlayer then
+			ReplicationEvent:FireServer(
+				Networking.bitPack({
+					replicationAction = Enums.ControllerReplicationAction.UpdateToggle,
+					controllerId = self.controller.id,
+					mechanicBoolean = toggle,
+					mechanicId = self._id,
+				})
+			)
+		end
+
+		self:SoftToggle(toggle, ...)
+	end
+end
+
+local function Enable(self: Mechanic, toggle: boolean, ...)
 	if toggle == nil then
 		toggle = true
 	end
 
 	if self._enabled ~= toggle then
+		if toggle then
+			self.Enabled:Fire()
+		else
+			self.Disabled:Fire()
+		end
+
 		self._enabled = toggle
 		if toggle then
 			self._cleanupFunction(...)
@@ -96,11 +153,52 @@ function Mechanic.Enable(self: Mechanic, toggle: boolean, ...)
 	end
 end
 
+if RunService:IsServer() then
+	Mechanic.SoftEnable = function(self: Mechanic, toggle: boolean, ...)
+		self.Enabled:Fire(toggle)
+
+		Enable(self, toggle, ...)
+	end
+
+	Mechanic.Enable = function(self: Mechanic, toggle: boolean, ...)
+		if toggle == nil then
+			toggle = true
+		end
+
+		ReplicationEvent:FireClient(
+			self.controller.player,
+			Networking.bitPack({
+				replicationAction = Enums.ControllerReplicationAction.UpdateEnable,
+				controllerId = self.controller.id,
+				mechanicBoolean = toggle,
+				mechanicId = self._id,
+			})
+		)
+
+		self:SoftToggle(toggle, ...)
+	end
+else
+	Mechanic.SoftEnable = function(self: Mechanic, toggle: boolean, ...)
+		self.Enabled:Fire(toggle)
+
+		Enable(self, toggle, ...)
+	end
+
+	Mechanic.Enable = Mechanic.SoftEnable
+end
+
 function Mechanic.Disable(self: Mechanic, toggle: boolean, ...)
 	if toggle == nil then
 		toggle = true
 	end
 	self:Enable(not toggle, ...)
+end
+
+function Mechanic.DisableWithoutFiring(self: Mechanic, toggle: boolean, ...)
+	if toggle == nil then
+		toggle = true
+	end
+	self:EnableWithoutFiring(not toggle, ...)
 end
 
 function Mechanic.Destroy(self: Mechanic, ...)
