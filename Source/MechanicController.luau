@@ -288,6 +288,12 @@ if RunService:IsServer() then
 		replicateToPlayer(player)
 	end)
 
+	Players.PlayerRemoving:Connect(function(player: Player)
+		if player.Character and module.Controllers[player.Character] then
+			module.Controllers[player.Character]:Destroy()
+		end
+	end)
+
 	for _, player: Player in pairs(Players:GetPlayers()) do
 		replicateToPlayer(player)
 	end
