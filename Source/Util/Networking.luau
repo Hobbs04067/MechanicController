@@ -45,7 +45,7 @@ function module.bitPack(packData: BitPackData): buffer
 		packedMechanicId = packData.mechanicId - 1
 	end
 
-	local buff = buffer.create(32)
+	local buff = buffer.create(4)
 	buffer.writei32(
 		buff,
 		0,

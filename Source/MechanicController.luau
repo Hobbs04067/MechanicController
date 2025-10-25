@@ -226,7 +226,7 @@ function Controller.Destroy(self: MechanicController)
 
 	if not missingCoreComponent then
 		for _, mechanic: Mechanic in pairs(self.mechanics) do
-			mechanic:Disable()
+			mechanic:SoftEnable(false)
 		end
 	end
 
