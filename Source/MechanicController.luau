@@ -188,25 +188,27 @@ elseif RunService:IsClient() then
 	module.new = function(player: Player, controllerId: number)
 		local self = new(player, controllerId)
 
-		self._resetBindableEvent = Instance.new("BindableEvent")
-		self.PlayerReset = self._resetBindableEvent.Event
+		if player == Players.LocalPlayer then
+			self._resetBindableEvent = Instance.new("BindableEvent")
+			self.PlayerReset = self._resetBindableEvent.Event
 
-		local success = false
+			local success = false
 
-		repeat
-			success = pcall(function()
-				StarterGui:SetCore("ResetButtonCallback", self._resetBindableEvent)
+			repeat
+				success = pcall(function()
+					StarterGui:SetCore("ResetButtonCallback", self._resetBindableEvent)
+				end)
+
+				task.wait(0.1)
+			until success
+
+			self._connections["ResetButtonPressed"] = self.PlayerReset:Connect(function()
+				ReplicationEvent:FireServer(Networking.bitPack({
+					replicationAction = Enums.ControllerReplicationAction.Detruct,
+					controllerId = self.id,
+				}))
 			end)
-
-			task.wait(0.1)
-		until success
-
-		self._connections["ResetButtonPressed"] = self.PlayerReset:Connect(function()
-			ReplicationEvent:FireServer(Networking.bitPack({
-				replicationAction = Enums.ControllerReplicationAction.Detruct,
-				controllerId = self.id,
-			}))
-		end)
+		end
 
 		return self
 	end
