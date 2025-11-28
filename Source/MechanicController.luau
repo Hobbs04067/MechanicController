@@ -244,7 +244,9 @@ function Controller.Destroy(self: MechanicController)
 
 		table.insert(module._availableControllerIds, self.id)
 	else
-		self._resetBindableEvent:Destroy()
+		if self.player == Players.LocalPlayer then
+			self._resetBindableEvent:Destroy()
+		end
 	end
 
 	module.Destructing:Fire(self)
