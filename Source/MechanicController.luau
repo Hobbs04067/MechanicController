@@ -34,7 +34,6 @@ local module = {
 	ConstructingPreMechanics = Bindable.new(),
 	ConstructingPostMechanics = Bindable.new(),
 	Destructing = Bindable.new(),
-	PlayerReplicated = Bindable.new(),
 }
 
 module.MechanicDataModules = {}
@@ -283,8 +282,6 @@ local function replicateToPlayer(player: Player)
 			)
 		end
 	end
-
-	module.PlayerReplicated:Fire(player)
 end
 
 if RunService:IsServer() then
