@@ -1,0 +1,8 @@
+exlude = ["**"]
+include = [
+    "README.md",
+    "Source",
+    "Source/*",
+    "docs.md",
+    "wally.toml"
+]
