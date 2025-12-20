@@ -1,0 +1,7 @@
+{
+  "emitLegacyScripts": false,
+  "name": "playereventsequencer",
+  "tree": {
+    "$path": "src"
+  }
+}

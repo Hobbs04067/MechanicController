@@ -1,8 +1,12 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ReplicationEvent = script.Parent.ReplicateController
+
+local Packages = ReplicatedStorage.Packages
+local PES = require(Packages.playereventsequencer)
 
 local Util = script.Parent.Util
 local Types = require(Util.Types)
@@ -285,11 +289,11 @@ local function replicateToPlayer(player: Player)
 end
 
 if RunService:IsServer() then
-	Players.PlayerAdded:Connect(function(player: Player)
+	PES.PlayerAdded:Connect(function(player: Player)
 		replicateToPlayer(player)
 	end)
 
-	Players.PlayerRemoving:Connect(function(player: Player)
+	PES.PlayerRemoving:Connect(function(player: Player)
 		if player.Character and module.Controllers[player.Character] then
 			module.Controllers[player.Character]:Destroy()
 		end
