@@ -1,6 +1,6 @@
 [package]
 name = "hobbs04067/mechaniccontroller"
-version = "0.21.5"
+version = "0.21.6"
 license = "MIT"
 authors = ["Hobbs0406"]
 registry = "https://github.com/UpliftGames/wally-index"
@@ -15,4 +15,4 @@ include = [
 ]
 
 [dependencies]
-playereventsequencer = "hobbs04067/playereventsequencer@0.1.2"
+playereventsequencer = "hobbs04067/playereventsequencer@0.1.3"
